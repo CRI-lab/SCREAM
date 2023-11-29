@@ -27,22 +27,22 @@ savefig = True
 # ----------------------------------------------------------------------
 
 
-def truncate_data(truncation_file, data_table):
-    # Load truncation file and data table
-    # truncation_matrix = np.loadtxt(truncation_file, dtype=int)
-    # data_matrix = np.loadtxt(data_table)
-    data_matrix = data_table
-    truncation_matrix = truncation_file;
+def truncate_data(truncation_matrix, data_table):
+    # Load data table
+    data_matrix = np.loadtxt(data_table)
 
     # Initialize the result matrix with None
-    result_matrix = np.full_like(data_matrix, fill_value=None, dtype=data_matrix.dtype)
+    result_matrix = np.full_like(data_matrix, fill_value=None, dtype=float)
 
     # Initialize variables to keep track of changes
     modified_rows = set()
     modified_cols = set()
 
     # Iterate through each truncation row
-    for start_row, end_row, start_col, end_col in truncation_matrix:
+    for row in truncation_matrix:
+        # Unpack the row
+        start_row, end_row, start_col, end_col = row
+
         # Ensure indices are within the data_matrix shape
         start_row = max(0, start_row - 1)
         end_row = min(data_matrix.shape[0], end_row)
@@ -83,19 +83,19 @@ for sectname in sects:
 
     # Define directory name and full filename where data file is located
     dirname = f"{regiondirname}{sectname}_dat\\"
-    modelname = f"{sectname}toedist.txt"
+    modelname = f"{sectname}Toedist.txt"
     datfile = f"{dirname}{modelname}"
 
     # Define full filename of truncation file (identifies hardened shorelines)
-    truncname = f"{sectname}truncation.txt"
+    truncname = f"{sectname}Truncation.txt"
     truncfile = f"{dirname}{truncname}"
 
     # Define full filename of boundary file (identifies alongshore breaks in continuity)
-    boundname = f"{sectname}boundary.txt"
+    boundname = f"{sectname}Boundary.txt"
     boundfile = f"{dirname}{boundname}"
 
     # Define directory name and full filename where veg line data file is located
-    vegname = f"{sectname}vegdist.txt"
+    vegname = f"{sectname}Vegdist.txt"
     vegfile = f"{dirname}{vegname}"
 
     # ---------------------------
@@ -146,7 +146,9 @@ for sectname in sects:
         # do nothing - no transect data to truncate
         pass
     else:
-        result, modified_rows, modified_cols = truncate_data(trunc, data_trunc)
+        # Load matrices from files
+        truncation_matrix = np.loadtxt(truncname, dtype=int, skiprows=1)  # Assuming there is a header row
+        result, modified_rows, modified_cols = truncate_data(truncation_matrix, datfile)
 
 # # Print result and modified indices
 # print(result)
