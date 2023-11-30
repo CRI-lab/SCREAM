@@ -25,6 +25,40 @@ savefig = True
 
 # END OF USER INPUT AREA
 # ----------------------------------------------------------------------
+def get_truncation_indices(truncation_matrix):
+    # Initialize variables for rows and columns
+    rows = set()
+    columns = []
+
+    # Iterate through each truncation row
+    for row in truncation_matrix:
+        # Unpack the row
+        #start_row, end_row, column = row
+        start_row = next(row)
+        end_row = next(row)
+        column = next(row)
+        
+
+        # Ensure indices are within the specified range
+        rows.update(range(start_row, end_row + 1))
+        columns.extend([column] * (end_row - start_row + 1))
+
+    return list(rows), columns
+
+def create_result_matrix(data_table, truncation_matrix):
+    # Load data table
+    data_matrix = np.loadtxt(data_table)
+
+    # Get indices from truncation matrix
+    rows, columns = get_truncation_indices(truncation_matrix)
+
+    # Create result matrix with NaN values in specified rows and columns
+    result_matrix = data_matrix.copy()
+    result_matrix[rows, :] = np.nan
+    result_matrix[:, columns] = np.nan
+
+    return result_matrix
+
 
 
 def truncate_data(truncation_matrix, data_table):
@@ -156,7 +190,8 @@ for sectname in sects:
         #truncation_matrix = np.loadtxt(truncfile, dtype=int, skiprows=1)  # Assuming there is a header row #trunc = np.loadtxt(truncfile)
         #trunc = iter(trunc, axis=1)
         trunc_rows = np.apply_along_axis(iter, axis=0, arr= trunc.astype(int)) #turn trunc array into iterable rows..?
-        result, data_matrix, modified_rows, modified_cols = truncate_data(trunc_rows, datfile)
+        result = create_result_matrix(datfile, trunc_rows)
+        #result, data_matrix, modified_rows, modified_cols = truncate_data(trunc_rows, datfile)
         print(result)
 
 # # Print result and modified indices
