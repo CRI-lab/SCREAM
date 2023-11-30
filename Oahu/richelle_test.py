@@ -39,9 +39,13 @@ def truncate_data(truncation_matrix, data_table):
     modified_cols = set()
 
     # Iterate through each truncation row
-    for row in truncation_matrix:
-        # Unpack the row
-        start_row, end_row, start_col, end_col = row
+    for row in truncation_matrix: #each row of the matrix... truncation matrix is a a bunch of iterators.
+        # Unpack the row. Row is an iterator...? 
+        #start_row, end_row, start_col, end_col = row 
+        start_row = next(row)
+        end_row = next(row)
+        start_col = next(row)
+        end_col = next(row)
 
         # Ensure indices are within the data_matrix shape
         start_row = max(0, start_row - 1)
@@ -56,7 +60,7 @@ def truncate_data(truncation_matrix, data_table):
         modified_rows.update(range(start_row, end_row))
         modified_cols.update(range(start_col, end_col))
 
-    return result_matrix, list(modified_rows), list(modified_cols)
+    return result_matrix, data_matrix, list(modified_rows), list(modified_cols)
 
 
 m2ft = 3.28084  # conversion factor for meters to feet
@@ -144,11 +148,16 @@ for sectname in sects:
     #       any rows or columns), it only replaces the duplicate data with NaNs
     if np.isnan(trunc.flat[0]): # first element is NaN
         # do nothing - no transect data to truncate
+        print(f"SKIPPING {sectname}... trunc file empty")
         pass
+        
     else:
         # Load matrices from files
-        truncation_matrix = np.loadtxt(truncname, dtype=int, skiprows=1)  # Assuming there is a header row
-        result, modified_rows, modified_cols = truncate_data(truncation_matrix, datfile)
+        #truncation_matrix = np.loadtxt(truncfile, dtype=int, skiprows=1)  # Assuming there is a header row #trunc = np.loadtxt(truncfile)
+        #trunc = iter(trunc, axis=1)
+        trunc_rows = np.apply_along_axis(iter, axis=0, arr= trunc.astype(int)) #turn trunc array into iterable rows..?
+        result, data_matrix, modified_rows, modified_cols = truncate_data(trunc_rows, datfile)
+        print(result)
 
 # # Print result and modified indices
 # print(result)
