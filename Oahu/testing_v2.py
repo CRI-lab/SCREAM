@@ -30,7 +30,7 @@ if np.product(trunc.shape) == 1 and trunc.flatten()[0] is np.nan:
 
     #continue # Skip to next elt in the loop
 
-## Convert truncation inds 
+## Convert truncation inds to python (from matlab, columns index would start at 1)
 
 trunc[:, 2] -= 1
 
