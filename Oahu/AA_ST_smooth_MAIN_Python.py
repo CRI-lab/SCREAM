@@ -1,11 +1,23 @@
-import os
+# -*- coding: utf-8 -*-
+"""
+Created on Thu Nov 30 13:31:56 2023
+
+@author: rum
+
+Changed the way we truncate the matrices to be more pythonic. 
+TO DO: fix regression script.
+Input: Text files / folders with the named text files for the region. 
+Output: Figures and folders with linear regressions
+
+ADAPTED from Tiffany Andersos AA_ST_smooth_MAIN.m' matlab script. 
+This script calculates rates and intercepts using ST
+"""
+
+import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-
-#testing script edited by Richelle
-#11/22 
-#sits in Oahu folder in historical_analysis_example. 
-#references into the EOahu folders. 
+import os
+from AA_ST_regression_Python import AAA_ST_regress
 
 # BEGINNING OF USER INPUT AREA
 
@@ -19,7 +31,6 @@ savefig = True
 
 # END OF USER INPUT AREA
 # ----------------------------------------------------------------------
-
 m2ft = 3.28084  # conversion factor for meters to feet
 
 # make directory called '<region>_results' if it does not exist
@@ -41,28 +52,30 @@ results_all = {}
 
 for sectname in sects:
     print(f"Processing {sectname}...")
-
     # Define directory name and full filename where data file is located
     dirname = f"{regiondirname}{sectname}_dat\\"
-    modelname = f"{sectname}toedist.txt"
+    modelname = f"{sectname}Toedist.txt"
     datfile = f"{dirname}{modelname}"
 
     # Define full filename of truncation file (identifies hardened shorelines)
-    truncname = f"{sectname}truncation.txt"
+    truncname = f"{sectname}Truncation.txt"
     truncfile = f"{dirname}{truncname}"
 
     # Define full filename of boundary file (identifies alongshore breaks in continuity)
-    boundname = f"{sectname}boundary.txt"
+    boundname = f"{sectname}Boundary.txt"
     boundfile = f"{dirname}{boundname}"
 
     # Define directory name and full filename where veg line data file is located
-    vegname = f"{sectname}vegdist.txt"
+    vegname = f"{sectname}Vegdist.txt"
     vegfile = f"{dirname}{vegname}"
 
     # ---------------------------
     # load data, veg, boundary, and truncation files
-    data_raw = np.loadtxt(datfile)
-    trunc = np.loadtxt(truncfile)
+    data_raw = pd.read_csv(datfile, sep="\t", header=None).to_numpy()
+    full = np.copy(data_raw)
+    full_flat = np.copy(data_raw)
+    
+    trunc = pd.read_csv(truncfile, sep="\t", header=None).to_numpy().astype(np.int16)
     bounds = np.loadtxt(boundfile)
     veg_raw = np.loadtxt(vegfile)
 
@@ -85,66 +98,69 @@ for sectname in sects:
     if not (veg_raw[2:, 0] <= data_raw[2:, 0]).all():
         raise ValueError("Transect numbers in veg dist file do not match those in toedist. Please check data.")
 
-    # -----------------------------------------------
-    # define time series segments
+    # define time series segments, years
     t_data = data_raw[0, 1:]
-
-    # Truncate full data series so that duplicate seawall positions are set to NaN
-    data_trunc = np.copy(data_raw)
-
+          
     # put truncated values in matrix for plotting later. initialize matrices. 
-    truncated_data = np.full_like(data_raw, np.nan)
-    # put hard shoreline values in matrix for plotting later
-    hardshore_data = np.full_like(data_raw, np.nan)
-    hardshore_data_flat = np.full_like(data_raw, np.nan)
-    hardshore_data_flat_truncated = np.full_like(data_raw, np.nan)
-
-    # Based on truncation file, remove duplicate data due to seawall
-    # construction or other hard structure by setting those data to NaN
-    # NOTE: This does not change the size of the matrix (doesn't remove
-    #       any rows or columns), it only replaces the duplicate data with NaNs
-    if np.isnan(trunc.flat[0]): # first element is NaN
-        # do nothing - no transect data to truncate
-        pass
-    else:
-        for ind in range(trunc.shape[0]): # rows in trunc matrix, one or more.
-            if trunc.ndim == 1: # the case where trunc is only one row (i.e - kahuku)
-                row_start = np.where(data_trunc[:, 0] == trunc[0]) 
-                row_start = row_start[-1] 
-                row_end = np.where(data_trunc[:, 0] == trunc[1])  
-                row_end = row_end[-1] 
-                cols_keep = slice(int(trunc[2]), int(trunc[3]) + 1) # the last two numbers
-
-            else: #trunc files that are more than one row (the usual case)
-                row_start = np.where(data_trunc[:, 0] == trunc[ind,0])  # match first column to first el in ind row 
-                row_start = row_start[-1] # find last element, fixes bug tiff gets
-                row_end = np.where(data_trunc[:, 0] == trunc[ind, 1])  
-                row_end = row_end[-1] 
-                cols_keep = slice(trunc[ind, 2], trunc[ind, 3] + 1)
-            
-            cols_tmp = np.arange(data_trunc.shape[1] - 1)
-            cols_tmp[cols_keep] = None #cannot use nans with ints
-            cols_remove = cols_tmp[~(cols_tmp is None)] + 1
-
-            if np.any(np.sum(~np.isnan(data_raw[row_start:row_end, trunc[ind, 3] + 1:]), axis=1) > 1):
-                hard_dat = data_raw[row_start:row_end, trunc[ind, 3] + 1:]
-                hard_dat_nan = np.isnan(hard_dat)
-                hardshore_data[row_start:row_end, trunc[ind, 3] + 1:] = hard_dat
-                hard_dat_flat = np.tile(hard_dat[:, 0], (1, hard_dat.shape[1]))
-                hard_dat_flat[hard_dat_nan] = np.nan
-                hardshore_data_flat[row_start:row_end, trunc[ind, 3] + 1:] = hard_dat_flat
-                hardshore_data_flat_truncated[row_start:row_end, trunc[ind, 3] + 2:] = hard_dat_flat[:, 1:]
-
-            truncated_data[row_start:row_end, cols_remove] = data_raw[row_start:row_end, cols_remove]
-            data_trunc[row_start:row_end, cols_remove] = np.nan
-
-    truncated_data = truncated_data[2:, 1:]
-    hardshore_data = hardshore_data[2:, 1:]
-    hardshore_data_flat = hardshore_data_flat[2:, 1:]
-    hardshore_data_flat_truncated = hardshore_data_flat_truncated[2:, 1:]
-
+    hardshore_data = np.full_like(full, np.nan)                  #All nans except col_end value, and Nan'd values (full)
+    truncated_data = np.full_like(full, np.nan)                  #All nans except Nan'd values (full)
+    hardshore_data_flat = np.full_like(full, np.nan)             #All nans except col_end value, and Nan'd values  (full_flat)
+    hardshore_data_flat_truncated = np.full_like(full, np.nan)   #All nans except Nan'd values (full_flat)
+        
+    
+    ## Check that truncation inds are not just NaN, if so skip that file. No truncation
+    if np.product(trunc.shape) == 1 and trunc.flatten()[0] is np.nan:
+        
+        #raise ValueError("Nothing to truncate")
+        print(f"SKIPPING {sectname}... trunc file empty")
+        continue # Skip to next elt in the loop
+    
+    ## Convert truncation inds to python (from matlab, columns index would start at 1)
+    trunc[:, 2] -= 1
+    
+    # Based on truncation file, remove duplicate data due to seawall 
+    # construction or other hard structure by setting those data to NaN 
+    # NOTE: This does not change the size of the matrix (doesn't remove 
+    # any rows or columns), it only replaces the duplicate data with NaNs or flattens it to the value in [row,col_end]
+    
+    for trans_start, trans_end, col_start, col_end in trunc:
+        # Note that trans end is inclusive, but col end is not
+        
+        row_start = np.where(full[:, 0] == trans_start)[0][0]  # find the row index that matches the trans_start
+        row_end = np.where(full[:, 0] == trans_end)[0][0] + 1  # find the row index that matches the trans_end + 1 (because need inclusivity)
+        
+        ## Since the first column (transect number) needs to be ignored
+        col_start += 1 # We don't actually need column start at all!? It seems trunc file ALWAYS has third column starting at index 1 (to keep)
+        col_end_og = col_end
+        col_end += 1 
+        
+        #keep_cols = range(col_start,col_end,1)
+        ## Fill data
+        
+        #record data matrices 
+        hardshore_data[row_start:row_end, col_end-1:] = full[row_start:row_end, col_end-1:]
+        truncated_data[row_start:row_end, col_end:] = full[row_start:row_end, col_end:]
+    
+        #change the data table copies
+        full[row_start:row_end, col_end:] = np.nan #if assuming third column is always 1, this is same as data_trunc
+        
+        full_flat[row_start:row_end, col_end:] = full[row_start:row_end, col_end-1].reshape((row_end-row_start, 1)) 
+        
+        #record second pair of data matrices
+        hardshore_data_flat[row_start:row_end, col_end-1:] = full_flat[row_start:row_end, col_end-1:]
+        hardshore_data_flat_truncated[row_start:row_end, col_end:] = full_flat[row_start:row_end, col_end:]
+        
+    
+    #slice off the row with the dates and the column with the transect numbers.     
+    hardshore_data = hardshore_data[2:,1:]
+    truncated_data = truncated_data[2:,1:]
+    hardshore_data_flat = hardshore_data_flat[2:,1:]
+    hardshore_data_flat_truncated = hardshore_data_flat_truncated[2:,1:]
+    
+    ### END TRUNCATION SHIT, START REGRESSION
+    
     # perform ST regression
-    ST_sect, ST_sect_figs = AAA_ST_regress(data_trunc, bounds, flag_df_one_add_one)
+    ST_sect, ST_sect_figs = AAA_ST_regress(full, bounds, flag_df_one_add_one)
     ST_sect['truncated_data_m'] = truncated_data
     ST_sect['truncated_data_ft'] = truncated_data * m2ft
     ST_sect['hardshore_data_m'] = hardshore_data
@@ -190,3 +206,4 @@ np.save(f"{region}_results\workspace_ALL", results_all)
 np.save(f"{region}_results\AA_results_all", results_all)
 
 print(f"Pau: {region} rates.")
+
