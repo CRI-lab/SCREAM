@@ -4,14 +4,16 @@ Created on Fri Dec  1 17:40:07 2023
 
 @author: rum
 """
+import sys
+sys.path.append(r'F:\SCREAM\Oahu')
 
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy.sparse as sp #csr_matrix
 import scipy.linalg as la #block_diag, sqrtm, toeplitz, inv
 from scipy.stats import t
-#from make_smooth_mat_python import make_smooth_mat
-import make_smooth_mat_python
+from make_smooth_mat_python import make_smooth_mat
+
 
 def AAA_ST_regress(data_orig, bounds, flag_df_one_add_one):
     m2ft = 3.28084  # conversion factor for meters to feet
