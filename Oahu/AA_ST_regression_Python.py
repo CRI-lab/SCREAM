@@ -11,6 +11,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import scipy.sparse as sp #csr_matrix
 import scipy.linalg as la #block_diag, sqrtm, toeplitz, inv
+from scipy.sparse.linalg import inv
 from scipy.stats import t
 from make_smooth_mat_python import make_smooth_mat
 
@@ -34,28 +35,29 @@ def AAA_ST_regress(data_orig, bounds, flag_df_one_add_one):
     
     # Define some variables from data input
    
-    x_data = data_orig_cond[3: , 1] #transect numbers
-    x_dist = [x_data-x_data[1]+1]*dx_tr  #convert transect numbers to distances;first transect is 20m, 2nd is 40m, etc
-    y_data = data_orig_cond[3:,2:] #shoreline positions (m) (distance from baseline)
-    t_data = data_orig_cond[1,2:] #survey times (year)
+    x_data = data_orig_cond[2: , 0] #transect numbers (starts with 0 in python?)
+    x_dist = np.array(x_data-x_data[1]+2)*dx_tr  #convert transect numbers to distances;first transect is 20m, 2nd is 40m, etc
+    y_data = data_orig_cond[2:,1:] #shoreline positions (m) (distance from baseline)
+    t_data = data_orig_cond[0,1:] #survey times (year)
     I = len(x_data) #number of transects (spatial)
     J = len(t_data) #number of surveys (time)
-    m_err = np.tile(data_orig_cond[2, 2:], (I, 1)) # put measurement errors in matrix m_err
+    m_err = np.tile(data_orig_cond[1, 1:], (I, 1)) #put measurement errors in matrix m_err. represents main diagonal. repeated values of the errors. 
 
     
-
     # Create initial data covariance matrix
-    Cd_orig = sp.diags(np.reshape(m_err ** 2, J * I), 0, J * I, J * I)
-    Cd_inv_orig = la.inv(Cd_orig)
-    Cd_orig_half = la.sqrtm(Cd_orig)
+    # (diagonal sparse matrix of squared measurement errors)
+    Cd_orig = sp.diags(np.reshape(m_err ** 2, J * I), offsets=0) #shape should be square
+    Cd_orig_csc = Cd_orig.tocsc()            # formatting
+    Cd_inv_orig = sp.linalg.inv(Cd_orig_csc) # invert the square matrix
+    Cd_orig_half_sparse = np.sqrt(Cd_orig_csc.data)
 
 
     # Calculate rates and parameters using ST method
 
     # Determine weighted mean of times for each transect
-    m_err2_mat_zero = m_err ** -2
-    m_err2_mat_zero[np.isnan(y_data)] = 0
-    t_weighted_means = np.sum(m_err2_mat_zero * t_data) / np.sum(m_err2_mat_zero, axis=1)
+    m_err2_mat_zero = 1 / (m_err ** 2)  # calculate each err^(-2)
+    m_err2_mat_zero[np.isnan(y_data)] = 0  # set to zero where there is no data
+    t_weighted_means = np.sum(m_err2_mat_zero * t_data.reshape(1, -1)) / np.sum(m_err2_mat_zero, axis=1)
     
     # define time and data arrays (with and without NaN data values)
     t_data_mat = np.tile(t_data, (I, 1))
@@ -72,9 +74,9 @@ def AAA_ST_regress(data_orig, bounds, flag_df_one_add_one):
     # Define system matrix (includes NaN data)
     i = np.arange(1, len(d_orig)+1)
     j = np.tile(np.arange(1, I+1), J)
-    sp = np.reshape(t_data_mat_demean, J * I, 1)
-    G_r = sp.csr_matrix((sp, (i, j)), shape=(len(d_orig), I))  # system matrix (portion) for rate only
-    G_i = sp.csr_matrix((np.ones_like(sp), (i, j)), shape=(len(d_orig), I))  # system matrix (portion) for intercept only
+    sp_ = np.reshape(t_data_mat_demean, (J * I, 1)) # very long vector
+    G_r = sp.csr_matrix((sp_, (i, j)), shape=(len(d_orig), I))  # system matrix (portion) for rate only
+    G_i = sp.csr_matrix((np.ones_like(sp_), (i, j)), shape=(len(d_orig), I))  # system matrix (portion) for intercept only
     G_orig = sp.hstack([G_r, G_i])  # complete system matrix for rate and intercept
     
     # Remove rows in the system matrix and covariance matrix where data is nan

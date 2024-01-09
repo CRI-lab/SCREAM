@@ -83,14 +83,14 @@ function [ST, figs_out] = AAA_ST_regress(data_orig, bounds, flag_df_one_add_one)
 
 
     % define system matrix (includes NaN data)
-    i = (1:length(d_orig))';
-    j = repmat((1:I)',J,1);
+    i_ = (1:length(d_orig))';
+    j_ = repmat((1:I)',J,1);
 %     sp = reshape(repmat(t_data_demean,I,1),J*I,1);
     sp = reshape(t_data_mat_demean,J*I,1);
-    G_r = sparse(i,j,sp); % system matrix (portion) for rate only
-    G_i = sparse(i,j,ones(size(sp))); % system matrix (portion) for intercept only
+    G_r = sparse(i_,j_,sp); % system matrix (portion) for rate only
+    G_i = sparse(i_,j_,ones(size(sp))); % system matrix (portion) for intercept only
     G_orig = [G_r G_i]; % complete system matrix for rate and intercept
-    clear i j sp G_r G_i 
+    clear i_ j_ sp G_r G_i 
 
 
     % remove rows in system matrix and covariance matrix, where data is nan

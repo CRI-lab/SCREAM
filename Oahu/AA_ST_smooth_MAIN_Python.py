@@ -17,7 +17,8 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import os
-from AA_ST_regression_Python import AAA_ST_regress
+#from AA_ST_regression_Python import AAA_ST_regress
+from AA_ST_regression_Python import *
 from make_smooth_mat_python import *
 
 # BEGINNING OF USER INPUT AREA
