@@ -28,6 +28,9 @@ Within AA_ST_smooth_MAIN_Python.py,  **AA_ST_regression_Python.py** is called!
 
 SCRIPT: 
 ***AA_ST_regression_Python.py***
+* [] Finish debugging regression code
+* !Note -- weights for time (line 60) seems too large...
+* 
 
 SCRIPT: 
 ***make_smooth_mat_python.py***
