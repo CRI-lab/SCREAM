@@ -75,7 +75,7 @@ def AAA_ST_regress(data_orig, bounds, flag_df_one_add_one):
     i = np.arange(1, len(d_orig)+1)
     j = np.tile(np.arange(1, I+1), J)
     sp_ = np.reshape(t_data_mat_demean, (J * I, 1)) # very long vector
-    G_r = sp.csr_matrix((sp_, (i, j)), shape=(len(d_orig), I))  # system matrix (portion) for rate only
+    G_r = sp.coo_matrix((sp_.flatten, (i, j)), shape=(len(d_orig), I))  # system matrix (portion) for rate only
     G_i = sp.csr_matrix((np.ones_like(sp_), (i, j)), shape=(len(d_orig), I))  # system matrix (portion) for intercept only
     G_orig = sp.hstack([G_r, G_i])  # complete system matrix for rate and intercept
     
