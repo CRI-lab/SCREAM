@@ -39,13 +39,18 @@ def make_smooth_mat(L):
 
         smooth_vec = np.array([1/13, 3/13, 5/13, 3/13, 1/13])
 
-        i = np.concatenate([np.ones(3), 2 * np.ones(4), np.repeat(np.arange(3, L - 2), 5),
-                            (L - 1) * np.ones(4), L * np.ones(3)])
+        i = np.concatenate([np.ones(3), 
+                            2 * np.ones(4), 
+                            np.repeat(np.arange(3, L-1), 5),
+                            (L-1)*np.ones(4), 
+                            L * np.ones(3)])
 
-        j = np.concatenate([np.arange(1, 4), np.arange(1, 5),
-                            np.reshape([np.arange(1, L - 3), np.arange(2, L - 2),
-                                        np.arange(3, L - 1), np.arange(4, L)], (L - 4) * 5),
-                            np.arange(L - 2, L + 1)])
+        j = np.concatenate([np.arange(1, 4),
+                            np.arange(1, 5),
+                            np.reshape(np.arange(1, L-3).repeat(5) + np.tile(np.arange(5), L-4), (L-4)*5, order='F'),
+                            np.arange(L-3, L+1),
+                            np.arange(L-2, L+1)
+        ])
 
         s = np.concatenate([row1, row2, np.tile(smooth_vec, L - 4), rowL2, rowL])
 
